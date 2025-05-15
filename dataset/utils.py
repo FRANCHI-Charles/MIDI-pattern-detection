@@ -3,10 +3,10 @@ import os.path
 import pickle
 from tqdm import tqdm
 
-from mathyslib.utils.midi import process_midi_separating_instruments
+from dataset.midi import process_midi_separating_instruments
 
 
-def load_pop909(folderpath:str) -> dict:
+def load_pop909(folderpath:str, mindiv:int=24) -> dict:
     """
     Load the pop909 dataset as a dict with track ID as key and the output
     of `process_midi_separating_instruments` as value, that is to say:
@@ -17,11 +17,13 @@ def load_pop909(folderpath:str) -> dict:
         full_subfolder_path = os.path.join(folderpath, subfolder)
         if os.path.isdir(full_subfolder_path):
             try:
-                data[subfolder] = process_midi_separating_instruments(os.path.join(full_subfolder_path, subfolder + ".mid"))
+                data[subfolder] = process_midi_separating_instruments(os.path.join(full_subfolder_path, subfolder + ".mid"), os.path.join(full_subfolder_path, "beat_midi.txt"), mindiv)
             except Exception as e:
                 print(f"Error while processing {subfolder} : {e}")
     return data
 
+
+### Save and load functions
 
 def save_dict(data:dict, filename:str):
     """Save a dict as pickle."""
