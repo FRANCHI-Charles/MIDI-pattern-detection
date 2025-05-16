@@ -34,3 +34,7 @@ def save_dict(data:dict, filename:str):
 def load_pickle_data(filename:str):
     with open(filename, "rb") as file :
         return pickle.load(file)
+    
+
+def from_pointset_to_matrix(points:list, mindiv:int=None):
+    return

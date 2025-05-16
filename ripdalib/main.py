@@ -3,28 +3,39 @@ import numpy as np
 from ripdalib.utils.morphology import opening, erosion
 
 
-def ripda(points:list, Lmax:int=20, step:float=0.25, N:int=4) -> list:
-  """
-  TO COMPLETE.
+def ripda(points:list, Lmax:int=20, step:float=0.25, N:int=4, L_list:list=None) -> list:
+    """
+    TO COMPLETE.
   
-  Parameters
-  ----------
-    points : list of tuples of dim 2
-        List of points (Onset, Pitch)
-  """
-  L_values = np.arange(step, Lmax, step)
-  results = []
+    Parameters
+    ----------
+        points : list of tuples of dim 2
+            List of points (Onset, Pitch)
+        Lmax : int
+            Maximum length for patterns.
+        step : float
+            Step size for L values.
+        N : int
+            Number of repetitions of the pattern.
+        L_list : list of floats
+            List of lengths to test. If None, will use np.arange(step, Lmax, step).
+    """
+    if L_list is not None:
+        L_values = L_list
+    else:
+        L_values = np.arange(step, Lmax, step)
+        
+    results = []
+    for L in L_values:
+        O_L = [(i*L, 0) for i in range(N)] # structuring element for finding patterns that are repeated N times
+        P = erosion(points, O_L) # find all points in the patterns P = erosion(X , O_L)
 
-  for L in L_values:
-    O_L = [(i*L, 0) for i in range(N)] # structuring element for finding patterns that are repeated N times
-    P = erosion(points, O_L) # find all points in the patterns P = erosion(X , O_L)
+        if len(P) > 0:
+            # print("L =", L)
+            # print("P =", P)
+            results.append((P, L))
 
-    if len(P) > 0:
-      # print("L =", L)
-      # print("P =", P)
-      results.append((P, L))
-
-  return results
+    return results
 
 
 def _windowing(P, L):

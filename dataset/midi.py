@@ -1,4 +1,4 @@
-#import mido
+import mido
 import pretty_midi
 import numpy as np
 from fractions import Fraction
@@ -6,11 +6,13 @@ import os
 
 def _msgs_to_notes(track):
     "return a list of notes as (onset_in_ticks_since_start, pitch)"
-    notes = [(0,0)]
+    notes =list()
+    time = 0
     for msg in track:
+        time += msg.time
         if msg.type == 'note_on' and msg.velocity > 0:
-            notes.append([notes[-1][0] + msg.time, msg.note])
-    return notes[1:]
+            notes.append([time, msg.note])
+    return notes
 
 def _extract_beat_times(file_path:str) -> list:
     float_numbers = [0]
@@ -44,49 +46,47 @@ def _find_nearest_division(time:float, beat_times:list, mindiv:int) -> Fraction:
     return previous_beat + Fraction(nearest_div, mindiv)
 
 
-# def process_midi_separating_instruments_mido(midi_file_path:str, mindiv:int=24) -> dict:
-    # """Processes a MIDI file and returns note information (onset, pitch)
-    # separated by instruments with onsets normalized to beats.
+def process_midi_separating_instruments_mido(midi_file_path:str, mindiv:int=24) -> dict:
+    """Processes a MIDI file and returns note information (onset, pitch)
+    separated by instruments with onsets normalized to beats.
 
-    # Args:
-    #   midi_file_path: Path to the MIDI file.
-    #   mindiv:int, 1/tatum (default is 24 to handle double semiquaver and triplet)
-    #   return_duration: bool, If True, returns the duration of the notes in beats.
+    Args:
+      midi_file_path: Path to the MIDI file.
+      mindiv:int, 1/tatum (default is 24 to handle double semiquaver and triplet)
+      return_duration: bool, If True, returns the duration of the notes in beats.
 
-    # Returns:
-    #   A dictionaries with keys 'midi_file' with the file name, and one key per 'instrument' with a list of values [note onset, note pitch(, note duration)].
-    # """
+    Returns:
+      A dictionaries with keys 'midi_file' with the file name, and one key per 'instrument' with a list of values [note onset, note pitch(, note duration)].
+    """
     
-    # midi_data = mido.MidiFile(midi_file_path)
+    midi_data = mido.MidiFile(midi_file_path)
 
     
 
-    # data = dict()
-    # data['midi_file'] = os.path.basename(midi_file_path)
+    data = dict()
+    data['midi_file'] = os.path.basename(midi_file_path)
 
-    # for i, track in enumerate(midi_data.tracks):
-    #     instrument_name = track.name if track.name else f'Track {i}'
-    #     notes = _msgs_to_notes(track)
-    #     if len(notes) == 0:
-    #         continue
+    for i, track in enumerate(midi_data.tracks):
+        instrument_name = track.name if track.name else f'Track {i}'
+        notes = _msgs_to_notes(track)
+        if len(notes) == 0:
+            continue
 
-    #     data[instrument_name] = list()
+        data[instrument_name] = list()
 
-    #     for note in notes:
-    #         # Convert ticks to note per beat
-    #         note[0] = (note[0] * mindiv) / midi_data.ticks_per_beat
-    #         print(note[0])
+        for note in notes:
+            # Convert ticks to note per beat
+            note[0] = (note[0] * mindiv) / midi_data.ticks_per_beat
 
-    #         try:
-    #             # Round onset to the nearest multiple of tatum
-    #             note[0] = round(note[0]) * Fraction(1, mindiv)
-    #             data[instrument_name].append(note)
+            try:
+                # Round onset to the nearest multiple of tatum
+                note[0] = round(note[0]) * Fraction(1, mindiv)
+                data[instrument_name].append(note)
                     
-    #         except Exception as e:
-    #             print(f"Error with onset calculation: {note[0]}, Track: {instrument_name}")
-    #             raise e
-    # print(midi_data.ticks_per_beat)
-    # return data
+            except Exception as e:
+                print(f"Error with onset calculation: {note[0]}, Track: {instrument_name}")
+                raise e
+    return data
 
 
 def process_midi_separating_instruments(midi_file_path:str, beat_file_path:str, mindiv:int=24) -> dict:
