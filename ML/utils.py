@@ -72,7 +72,15 @@ def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, 
     if not isinstance(selem, torch.Tensor):
         selem = torch.tensor(selem)
 
-    torch_array = (_erodila_conv(ar, selem, device, convdim) == selem.sum())
+    conv_results = _erodila_conv(ar, selem, device, convdim)
+    if selem.shape[-1] %2 == 0:
+        conv_results = conv_results[..., 1:]
+    if selem.shape[-2] %2 == 0:
+        conv_results = conv_results[..., 1:, :]
+    if convdim == 3 and selem.shape[-3] %2 == 0:
+        conv_results = conv_results[..., 1:, :, :]
+
+    torch_array = (conv_results == selem.sum())
 
     if return_numpy_array:
         return torch_array.to("cpu").int().numpy()
@@ -107,7 +115,15 @@ def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor,
     if not isinstance(selem, torch.Tensor):
         selem = torch.tensor(selem)
 
-    torch_array = _erodila_conv(ar, selem, device, convdim)
+    conv_results = _erodila_conv(ar, selem, device, convdim)
+    if selem.shape[-1] %2 == 0:
+        conv_results = conv_results[..., 1:]
+    if selem.shape[-2] %2 == 0:
+        conv_results = conv_results[..., 1:, :]
+    if convdim == 3 and selem.shape[-3] %2 == 0:
+        conv_results = conv_results[..., 1:, :, :]
+
+    torch_array = conv_results / selem.sum()
 
     if return_numpy_array:
         return torch_array.to("cpu").int().numpy()
@@ -146,7 +162,16 @@ def my_dilatation(ar: np.ndarray, selem: np.ndarray, device: torch.device = "cpu
     
     flipselem = torch.flip(selem, (0,1))
     #torch_array = (_old_erodila_conv(ar, flipselem, device) > 0).squeeze((0,1))
-    torch_array = (_erodila_conv(ar, flipselem, device, convdim) > 0)
+    conv_results = _erodila_conv(ar, flipselem, device, convdim)
+    if selem.shape[-1] %2 == 0:
+        conv_results = conv_results[..., :-1]
+    if selem.shape[-2] %2 == 0:
+        conv_results = conv_results[..., :-1, :]
+    if convdim == 3 and selem.shape[-3] %2 == 0:
+        conv_results = conv_results[..., :-1, :, :]
+
+    torch_array = (conv_results > 0)
+    
 
     if return_numpy_array:
         return torch_array.to("cpu").int().numpy()
