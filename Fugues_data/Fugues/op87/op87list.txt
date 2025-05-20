@@ -1,0 +1,80 @@
+The Complete MIDI files of Shostakovich's Preludes and Fugues opus 87
+
+Sequenced by José Oscar de Almeida Marques
+E-Mail: marques@super.zippo.com
+See my homepage http://www.GeoCities.com/Vienna/5619
+
+
+File            Piece                                       Revision
+----------------------------------------------------------------------
+op87_01a.mid    Prelude I C Major (Moderato)                Feb/11/1997
+op87_01b.mid    Fugue I in 4 parts (Moderato)               Feb/11/1997
+
+op87_02a.mid    Prelude II A minor (Allegro)                Feb/11/1997
+op87_02b.mid    Fugue II in 3 parts (Allegretto)            Feb/11/1997
+
+op87_03a.mid    Prelude III G Major (Moderato non troppo)   Feb/13/1997
+op87_03b.mid    Fugue III in 3 parts (Allegro molto)        Feb/13/1997
+
+op87_04a.mid    Prelude IV E minor (Andante)                Mar/21/1997
+op87_04b.mid    Fugue IV in 4 parts (Adagio - Più mosso)    Mar/19/1997
+
+op87_05a.mid    Prelude V D Major (Andante                  Mar/01/1997
+op87_05b.mid    Fugue V in 3 parts (Allegretto)             Mar/01/1997
+
+op87_06a.mid    Prelude VI B minor (Allegretto)             Mar/20/1997
+op87_06b.mid    Fugue VI in 4 parts (Moderato)              Mar/21/1997
+  
+op87_07a.mid    Prelude VII A Major (Allegro poco moderato) Feb/14/1997
+op87_07b.mid    Fugue VII in 3 parts (Allegretto)           Feb/26/1997
+
+op87_08a.mid    Prelude VIII F# minor (Allegretto)          Mar/02/1997
+op87_08b.mid    Fugue VIII in 3 parts (Andante              Mar/24/1997
+
+op87_09a.mid    Prelude IX E Major (Moderato non troppo)    Apr/01/1997
+op87_09b.mid    Fugue IX in 2 parts (Allegro)               Mar/05/1997
+
+op87_10a.mid    Prelude X C# minor (Allegro)                Apr/13/1997
+op87_10b.mid    Fugue X in 4 parts (Moderato)               Apr/14/1997
+
+op87_11a.mid    Prelude XI B Major (Allegro)                May/06/1997
+op87_11b.mid    Fugue XI in 3 parts (Allegro)               May/06/1997
+
+op87_12a.mid    Prelude XII G# minor (Andante)              May/06/1997
+op87_12b.mid    Fugue XII in 4 parts (Allegro)              May/07/1997
+
+op87_13a.mid    Prelude XIII F# Major (Moderato con moto)   Feb/28/1997
+op87_13b.mid    Fugue XIII in 5 parts (Adagio)              Feb/26/1997
+
+op87_14a.mid    Prelude XIV Eb minor (Adagio)               Mar/05/1997
+op87_14b.mid    Fugue XIV in 3 parts (Allegro non troppo)   Feb/08/1997
+
+op87_15a.mid    Prelude XV Db Major (Allegretto)            Mar/21/1997
+op87_15b.mid    Fugue XV in 4 parts (Allegro molto)         Mar/31/1997
+
+op87_16a.mid    Prelude XVI Bb minor (Andante)              Apr/17/1997
+op87_16b.mid    Fugue XVI in 3 parts (Adagio)               Apr/16/1997
+
+op87_17a.mid    Prelude XVII Ab Major (Allegretto)          Mar/05/1997
+op87_17b.mid    Fugue XVII in 4 parts (Allegretto)          Jan/02/1999
+
+op87_18a.mid    Prelude XVIII F minor (Moderato - Adagio)   Mar/29/1997
+op87_18b.mid    Fugue XVIII in 4 parts (Moderato con moto)  Jan/02/1999
+
+op87_19a.mid    Prelude XIX Eb Major (Allegretto)           Apr/12/1997
+op87_19b.mid    Fugue XIX in 3 parts (Moderato con moto)    Nov/20/1998
+
+op87_20a.mid    Prelude XX C minor (Adagio)                 Apr/20/1997
+op87-20b.mid    Fugue XX in 4 parts (Moderato)              Apr/20/1997
+
+op87_21a.mid    Prelude XXI Bb Major (Allegro)              Apr/08/1997
+op87_21b.mid    Fugue XXI in 3 parts (Allegro non troppo)   Apr/08/1997
+
+op87_22a.mid    Prelude XXII G minor (Moderato non troppo)  May/07/1997
+op87_22b.mid    Fugue XXII in 4 parts (Moderato)            Feb/11/1997
+
+op87_23a.mid    Prelude XXIII F Major (Adagio)              Feb/19/1997
+op87_23b.mid    Fugue XXIII in 3 parts (Moderato con moto)  Apr/05/1997
+
+op87_24a.mid    Prelude XXIV D minor (Andante)              Apr/23/1997
+op87_24b.mid    Fugue XXIV in 4 parts (Moderato - Più mosso)Apr/23/1997

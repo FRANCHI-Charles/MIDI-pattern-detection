@@ -1,3 +1,3 @@
-import ripdalib.utils.midi
-import ripdalib.utils.dataset
-import ripdalib.utils.morphology
+import ripdalib.utils.midi as midi
+import ripdalib.utils.dataset as dataset
+import ripdalib.utils.morphology as morphology

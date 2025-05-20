@@ -2,6 +2,8 @@ from dataset.utils import load_pickle_data
 import matplotlib.pyplot as plt
 import music21
 
+import ripdalib
+
 def show_poppickle():
     data = load_pickle_data("./pop909.pkl")
 

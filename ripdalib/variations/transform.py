@@ -42,3 +42,50 @@ def matrix_to_list(matrix:torch.Tensor, mindiv:int=None):
             if matrix[i,j] > 0:
                 points.append((Fraction(i, mindiv), j))
     return points
+
+
+def _get_first_nonzero(matrix:torch.Tensor):
+    """
+    Get the first non-zero element of a matrix, rows first (for line, for column in line).
+    """
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            if matrix[i,j] > 0:
+                return (i,j)
+
+
+def middlepoints_to_onsets(corr_map:torch.Tensor, pattern:torch.Tensor):
+    """
+    Translate the correlation map such as the correlation coresponds to onsets of the pattern.
+    
+    Parameters
+    ----------
+    corr_map : torch.Tensor
+        The correlation map to be translated.
+    pattern : torch.Tensor
+        The original pattern to be used for the translation.
+    
+    Returns
+    -------
+    torch.Tensor
+        The translated correlation map.
+    """
+
+    if len(pattern.shape) != 2:
+        raise NotImplementedError("Only 2D patterns are supported for now.")
+    centers = list()
+    for dim in pattern.shape:
+        if dim %2 == 0:
+            centers.append(dim//2 -1)
+        else:
+            centers.append((dim+1)//2 -1)
+
+    centers = torch.tensor(centers)
+    onset_point = _get_first_nonzero(pattern)
+    # create a large enough matrix to do the translations
+    translation = torch.zeros((corr_map.shape[0] + max(onset_point[0],centers[0]), corr_map.shape[1] + max(onset_point[1], centers[1])), dtype=corr_map.dtype)
+    translation[onset_point[0]:onset_point[0]+corr_map.shape[0], onset_point[1]:onset_point[1]+corr_map.shape[1]] = corr_map
+
+    return translation[centers[0]:centers[0]+corr_map.shape[0], centers[1]:centers[1]+corr_map.shape[1]] # + onset_point[0] - onset_point[0]...
+
+    
