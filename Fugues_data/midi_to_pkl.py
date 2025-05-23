@@ -23,7 +23,7 @@ MIDI_FOLDERS = ("Fugues", os.path.join("Fugues", "op87"))
 
 REMOVED_TIMING_PATH = "shorten.txt"
 
-OUTPUT_FILE = "data.pkl"
+OUTPUT_FILE = "data_16.pkl"
 
 
 

@@ -83,9 +83,9 @@ def Correlation_loss(smooth_function:float|Callable=None, beta:float=1, gamma:fl
                         difference_term += torch.abs(output[:,i] - output[:,j]).sum()
 
             size_loss = torch.tensor(0.)
-            for i in range(output.shape[1]):
-                size_loss += ((output[:,i].sum((-2,-1)) - mean_size)**2).sum()
-            size_loss = size_loss/(output.shape[0]*output.shape[1])
+            for i in range(output.shape[0]):
+                size_loss += ((output[i,0][output[i,0] >= 0.5]).sum() - mean_size)**2
+            size_loss = size_loss/output.shape[0]
             return -(1000*added_cor/input.sum() - beta/1000 * size_loss + gamma * difference_term /normalisation)
     
     return loss

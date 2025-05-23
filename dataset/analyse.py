@@ -37,12 +37,8 @@ def get_track_length(track:dict) -> dict:
     output = dict()
     for instrument, notes in track.items():
         if not instrument == "midi_file":
-            if len(notes[0]) >= 3:
-                # If the notes are in the form (onset, pitch, duration)
-                output[instrument] = max([note[0] + note[2] for note in notes])
-            else:
-                # If the notes are in the form (onset, pitch)
-                output[instrument] = max([note[0] for note in notes])
+            onsets = [note[0] for note in notes]
+            output[instrument] = max(onsets) - min(onsets)
         
     return output
 
