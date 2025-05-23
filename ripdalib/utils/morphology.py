@@ -1,3 +1,5 @@
+def _settable(list_list):
+    return [(elem[0], elem[1]) for elem in list_list]
 
 
 def erosion(X:list, S:list) -> list:
@@ -19,6 +21,7 @@ def erosion(X:list, S:list) -> list:
 
     eroded = list()
 
+    X = _settable(X)
     X = set(X)
 
     for (o, p) in X:
@@ -42,6 +45,7 @@ def dilation(X:list, S:list) -> list:
     """
     dilated = list()
 
+    X = _settable(X)
     X = set(X)
 
     # Get the first point of S to determine the translation vector

@@ -56,7 +56,7 @@ def process_midi_separating_instruments_mido(midi_file_path:str, mindiv:int=24) 
       return_duration: bool, If True, returns the duration of the notes in beats.
 
     Returns:
-      A dictionaries with keys 'midi_file' with the file name, and one key per 'instrument' with a list of values [note onset, note pitch(, note duration)].
+      A dictionaries with keys 'midi_file' with the file name, and one key per 'instrument' with a list of values [note onset, note pitch].
     """
     
     midi_data = mido.MidiFile(midi_file_path)
@@ -67,7 +67,7 @@ def process_midi_separating_instruments_mido(midi_file_path:str, mindiv:int=24) 
     data['midi_file'] = os.path.basename(midi_file_path)
 
     for i, track in enumerate(midi_data.tracks):
-        instrument_name = track.name if track.name else f'Track {i}'
+        instrument_name = f'Track {i}'
         notes = _msgs_to_notes(track)
         if len(notes) == 0:
             continue
@@ -108,8 +108,8 @@ def process_midi_separating_instruments(midi_file_path:str, beat_file_path:str, 
     data = dict()
     data['midi_file'] = os.path.basename(midi_file_path)
 
-    for instrument in midi_data.instruments:
-        instrument_name = instrument.name if instrument.name else 'Not provided'
+    for i, instrument in enumerate(midi_data.instruments):
+        instrument_name = f"Track {i}"
         data[instrument_name] = list()
 
         for note in instrument.notes:

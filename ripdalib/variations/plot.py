@@ -15,7 +15,7 @@ def plot_matrix(matrix:Tensor):
     """
     matrix = matrix.cpu()
     plt.figure(figsize=(20, 10))
-    plt.imshow(matrix.T, cmap='gray', origin="lower", interpolation='nearest')
+    plt.imshow(matrix.T, vmin=0, vmax=1, cmap='gray', origin="lower", interpolation='nearest')
     plt.show()
 
 
@@ -26,7 +26,7 @@ def plot_correlation(cor:Tensor):
     """
     cor = cor.cpu()
     plt.figure(figsize=(20, 10))
-    plt.imshow(cor.T, cmap='Reds', origin="lower", interpolation='nearest')
+    plt.imshow(cor.T, vmin=0, vmax=1, cmap='Reds', origin="lower", interpolation='nearest')
     # for (j,i),label in np.ndenumerate(cor):
     #     if label > 0:
     #         plt.text(i,j,label,ha='center',va='center')
@@ -74,16 +74,24 @@ def plot_patterns_from_correlation(cor:Tensor, piece:list | Tensor, pattern:list
     new_patterns = my_dilatation(cor>=threshold, pattern_matrix).squeeze((0, 1)) * piece_matrix
 
     new_patterns_list = matrix_to_list(new_patterns, mindiv=quantization)
+    if len(new_patterns_list) ==0:
+        print("No new patterns obtained with this threshold and correlation.")
+        return
 
     translations = piece[np.argmin([piece[i][0] for i in range(len(piece))])]
-    translations = [translations[0], translations[1] - new_patterns_list[0][1]]
+    translations = [translations[0] - new_patterns_list[0][0], translations[1] - new_patterns_list[0][1]]
 
     new_patterns_list = [(note[0] +translations[0], note[1] + translations[1]) for note in new_patterns_list]
 
+
     pattern_all = dilation(erosion(piece, pattern), pattern)
+    
 
     plt.figure(figsize=(20, 10))
     plt.scatter(*zip(*piece))
     plt.scatter(*zip(*new_patterns_list), color='red')
-    plt.scatter(*zip(*pattern_all), color='green')
+    if len(pattern_all) ==0:
+        print("dilatation on erosion of the pattern give 0 element.")
+    else:
+        plt.scatter(*zip(*pattern_all), color='green')
     plt.show()

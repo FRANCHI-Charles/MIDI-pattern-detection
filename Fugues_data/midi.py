@@ -56,7 +56,7 @@ def process_midi_separating_instruments_mido(midi_file_path:str, mindiv:int=24) 
       return_duration: bool, If True, returns the duration of the notes in beats.
 
     Returns:
-      A dictionaries with keys 'midi_file' with the file name, and one key per 'instrument' with a list of values [note onset, note pitch(, note duration)].
+      A dictionaries with keys 'midi_file' with the file name, and one key per 'instrument' with a list of values [note onset, note pitch].
     """
     
     midi_data = mido.MidiFile(midi_file_path)
