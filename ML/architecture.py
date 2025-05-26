@@ -9,89 +9,204 @@ from tqdm import tqdm
 from ML.utils import correlation
 
 
-def Correlation_loss(smooth_function:float|Callable=None, beta:float=1, gamma:float=0, mean_size:float = None):
+### Loss functions
+class CorrelationLoss():
     """
-    Define a loss function that tries to maximize the translative correlation between the output (kernel) and the input (image).
-    The loss is `-(1000 * correlation_sum/input.sum() + size_regulation + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
-    Wtih size_regulation is `beta * output.sum()/output_size` if mean_size = None, or the MSE between the total size and the mean_size if float.
-
-    Parameters
-    ----------
-    smooth_function : float|Callable
-        The function to regularize importance of correlation values.
-        If float or int (None => 3), use f(tensor) = tensor ** smooth_function.
-        Else, the function must take a tensor in input and return a tensor of same dimension.
-    beta:float
-        Regularization parameters to minimize the size of the pattern in the output.
-        If `mean_size` if a float, regularization apply to the MSE of the difference between the size and the expected one.
-    gamma:float
-        Regularization parameters such as all patterns per channel are differents.
-    mean_size:float
-        The mean size of the patterns to be learned.
-        If None, the size of the pattern is minimize.
-        Else, the loss is the MSE between the total size and the mean_size.
-
-    Return
-    ------
-    Callable
-        The loss function that takes in parameters (output, image).
+    Class of Differents correlation loss, function that tries to maximize the translative correlation between the output (kernel) and the input (image).
     
+    - absolute_regul
+    - square_regul
+    - minmax_regul
     """
-    if smooth_function is None:
-        smooth_function = lambda tensor : tensor ** 3
-    if isinstance(smooth_function, int) or isinstance(smooth_function, float):
-        exponent = smooth_function
-        smooth_function = lambda tensor : tensor ** exponent
 
-    if mean_size is None:
+    def __init__(self, **kwargs):
+        self.beta = kwargs.get("beta", 0.)
+        self.smooth_function = kwargs.get("smooth_function", None)
+        self.gamma = kwargs.get("gamma", 0.)
+        self.mean_size = kwargs.get("mean_size", None)
+
+
+    def minmax_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None):
+        """
+        The loss is `-(1000 * correlation_sum/input.sum() + beta * output.sum()/output_size + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
+
+        Parameters
+        ----------
+        smooth_function : float|Callable
+            The function to regularize importance of correlation values.
+            If float or int (None => 3), use f(tensor) = tensor ** smooth_function.
+            Else, the function must take a tensor in input and return a tensor of same dimension.
+        beta:float
+            Regularization parameters to minimize (positive value)/maximize (negative value) the sizeof the pattern in the output.
+        gamma:float
+            Regularization parameters such as all patterns per channel are differents.
+
+        Return
+        ------
+        Callable
+            The loss function that takes in parameters (output, image).
+    
+        """
+        if smooth_function is not None:
+            self.smooth_function = smooth_function
+        if beta is not None:
+            self.beta = beta
+        if gamma is not None:
+            self.gamma = gamma
+
         def loss(output:torch.Tensor, input:torch.Tensor):
             """
-            output : the output patterns
+            output : the output patterns of dimension (OutChannels, Channel//groups, H, W)
             
             input : the original image to correlate with.
             """
-            cor = correlation(input, output)
-            added_cor = smooth_function(cor).sum()
+            added_cor = self._added_correlation(output, input)
 
-            difference_term = torch.tensor(0.)
-            normalisation = torch.tensor(1.)
-            if gamma != 0:
-                normalisation = torch.tensor(math.prod(output[:,0].shape) * len(output.shape[1])*(len(output.shape[1])-1)/2)
-                for i in range(output.shape[1]):
-                    for j in range(i+1, output.shape[1]):
-                        difference_term += torch.abs(output[:,i] - output[:,j]).sum()
+            difference_term, normalisation = self._gamma_regul(output)
 
-            return -(1000*added_cor/input.sum() - beta * output.sum()/math.prod(output.shape) + gamma * difference_term /normalisation)
-    else:
+            return -(1000*added_cor/input.sum() - self.beta * output.sum()/math.prod(output.shape) + self.gamma * difference_term /normalisation)
+            
+        return loss
+    
+
+    def square_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None, mean_size:float = None):
+        """
+        The loss is `-(1000 * correlation_sum/input.sum() + size_regulation + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
+        Wtih size_regulation is the MSE between the total size and the mean_size if float.
+
+        Parameters
+        ----------
+        smooth_function : float|Callable
+            The function to regularize importance of correlation values.
+            If float or int (None => 3), use f(tensor) = tensor ** smooth_function.
+            Else, the function must take a tensor in input and return a tensor of same dimension.
+        beta:float
+            Regularization apply to the MSE of the difference between the size (sum) of the output and the expected one.
+        gamma:float
+            Regularization parameters such as all patterns per channel are differents.
+        mean_size:float
+            The mean size of the patterns to be learned.
+
+        Return
+        ------
+        Callable
+            The loss function that takes in parameters (output, image).
+        """
+        if smooth_function is not None:
+            self.smooth_function = smooth_function
+        if beta is not None:
+            self.beta = beta
+        if gamma is not None:
+            self.gamma = gamma
+        if mean_size is not None:
+            self.mean_size = mean_size
+
         def loss(output:torch.Tensor, input:torch.Tensor):
             """
-            output : the output patterns of dimension (Batch, Channel, H, W)
+            output : the output patterns of dimension (OutChannels, Channel//groups, H, W).
             
             input : the original image to correlate with.
             """
-            if len(output.shape) !=4:
-                raise ValueError("output must be of dimension (Batch, Channel, H, W)")
-            cor = correlation(input, output)
-            added_cor = smooth_function(cor).sum()
+            added_cor = self._added_correlation(output, input)
 
-            difference_term = torch.tensor(0.)
-            normalisation = torch.tensor(1.)
-            if gamma != 0:
-                normalisation = torch.tensor(math.prod(output[:,0].shape) * len(output.shape[1])*(len(output.shape[1])-1)/2)
-                for i in range(output.shape[1]):
-                    for j in range(i+1, output.shape[1]):
-                        difference_term += torch.abs(output[:,i] - output[:,j]).sum()
+            difference_term, normalisation = self._gamma_regul(output)
 
             size_loss = torch.tensor(0.)
             for i in range(output.shape[0]):
-                size_loss += ((output[i,0][output[i,0] >= 0.5]).sum() - mean_size)**2
+                size_loss += ((output[i,0][output[i,0] >= 0.5]).sum() - self.mean_size)**2
             size_loss = size_loss/output.shape[0]
-            return -(1000*added_cor/input.sum() - beta/1000 * size_loss + gamma * difference_term /normalisation)
+            return -(1000*added_cor/input.sum() - self.beta/1000 * size_loss + self.gamma * difference_term /normalisation)
+        
+        return loss
     
-    return loss
+
+    def absolute_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None, mean_size:float = None):
+        """
+        The loss is `-(1000 * correlation_sum/input.sum() + size_regulation + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
+        Wtih size_regulation is the absolute difference between the total size and the mean_size if float.
+
+        Parameters
+        ----------
+        smooth_function : float|Callable
+            The function to regularize importance of correlation values.
+            If float or int (None => 3), use f(tensor) = tensor ** smooth_function.
+            Else, the function must take a tensor in input and return a tensor of same dimension.
+        beta:float
+            Regularization apply to the absolute difference between the size (sum) of the output and the expected one.
+        gamma:float
+            Regularization parameters such as all patterns per channel are differents.
+        mean_size:float
+            The mean size of the patterns to be learned.
+
+        Return
+        ------
+        Callable
+            The loss function that takes in parameters (output, image).
+        
+        """
+        if smooth_function is not None:
+            self.smooth_function = smooth_function
+        if beta is not None:
+            self.beta = beta
+        if gamma is not None:
+            self.gamma = gamma
+        if mean_size is not None:
+            self.mean_size = mean_size
+
+        def loss(output:torch.Tensor, input:torch.Tensor):
+            """
+            output : the output patterns of dimension (OutChannels, Channel//groups, H, W).
+            
+            input : the original image to correlate with.
+            """
+            added_cor = self._added_correlation(output, input)
+
+            difference_term, normalisation = self._gamma_regul(output)
+
+            size_loss = torch.tensor(0.)
+            for i in range(output.shape[0]):
+                size_loss += torch.abs((output[i,0][output[i,0] >= 0.5]).sum() - self.mean_size)
+            size_loss = size_loss/output.shape[0]
+            return -(1000*added_cor/input.sum() - self.beta/100 * size_loss + self.gamma * difference_term /normalisation)
+        
+        return loss
 
 
+    def _added_correlation(self, output, input):
+        if len(output.shape) !=4:
+            raise ValueError("output must be of dimension (OutChannels, Channel//groups, H, W)")
+        cor = correlation(input, output)
+        added_cor = self.smooth_function(cor).sum()
+        return added_cor
+    
 
+    def _gamma_regul(self, output):
+        difference_term = torch.tensor(0.)
+        normalisation = torch.tensor(1.)
+        if self.gamma != 0:
+            normalisation = torch.tensor(math.prod(output[:,0].shape) * len(output.shape[1])*(len(output.shape[1])-1)/2)
+            for i in range(output.shape[1]):
+                for j in range(i+1, output.shape[1]):
+                    difference_term += torch.abs(output[:,i] - output[:,j]).sum()
+
+        return difference_term, normalisation
+    
+
+    @property
+    def smooth_function(self):
+        return self._smooth_function
+    
+    @smooth_function.setter
+    def smooth_function(self, value):
+        if value is None:
+            self._smooth_function = lambda tensor : tensor ** 3
+        elif isinstance(value, int) or isinstance(value, float):
+            self._smooth_function = lambda tensor : tensor ** value
+        else:
+            self._smooth_function = value
+
+
+### ML Architecture
 class SimplePatternLearner(nn.Module):
 
     def __init__(self, pattern_maxsize:tuple, strong_negative=False, *args, **kwargs):
@@ -128,11 +243,11 @@ class SimplePatternLearner(nn.Module):
     
 
     def learn_pattern(self, image, loss:Callable=None, learning_rates:float=0.01, optimization:torch.optim.Optimizer=torch.optim.Adam, maxepoch:int = 10**3, epsilon:float=0.001):
-        self.image = image
+        self.image = image.to(self.device)
         
         self.optimizer = optimization(self.parameters(), lr=learning_rates)
         if loss is None:
-            self.loss_func = Correlation_loss()
+            self.loss_func = CorrelationLoss().minmax_regul()
         else:
             self.loss_func = loss
 
@@ -166,5 +281,14 @@ class SimplePatternLearner(nn.Module):
 
     
 
-        
-        
+class PatternLearner(nn.Module):
+
+    def __init__(self, input_size:tuple[int,int,int], output_size:tuple[int,int,int], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+
+
+### OBSOLETE
+def Correlation_loss(smooth_function:float|Callable=None, beta:float=1, gamma:float=0, mean_size:float = None):
+    raise NotImplementedError("Obsolete. Look at CorrelationLoss Class")
