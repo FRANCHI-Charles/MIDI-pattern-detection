@@ -5,7 +5,11 @@ from ripdalib.variations.transform import list_to_matrix, _get_mindiv
 
 
 class FuguesDataset(Dataset):
-    "NOTE : implement Data Augmentation."
+    """
+    Data Augmentation with flip pitches.
+    NOTE : implement pitch transposition and time translation when possible.
+    
+    """
 
     def __init__(self, data_file:str, maxpitchdif:int=59, maxlength:float=481.0, mindiv:int=16):
         unprocessed = load_pickle_data(data_file)
@@ -29,9 +33,9 @@ class FuguesDataset(Dataset):
         self.data = torch.stack(self.data)
 
     def __getitem__(self, index):
-        return self.data[index]
+        return torch.concat((self.data, torch.flip(self.data, (-1,))))[index]
     
     def __len__(self):
-        return self.data.shape[0]
+        return self.data.shape[0] * 2
 
         

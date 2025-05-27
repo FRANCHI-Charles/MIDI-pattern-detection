@@ -28,7 +28,7 @@ class CorrelationLoss():
 
     def minmax_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None):
         """
-        The loss is `-(1000 * correlation_sum/input.sum() + beta * output.sum()/output_size + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
+        The loss is `-(1000 * correlation_sum/input.sum() + beta * output.sum()/output_shape + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
 
         Parameters
         ----------
@@ -282,9 +282,91 @@ class SimplePatternLearner(nn.Module):
     
 
 class PatternLearner(nn.Module):
+    "DO WE USE RESIDUAL ?"
 
-    def __init__(self, input_size:tuple[int,int,int], output_size:tuple[int,int,int], *args, **kwargs):
+    def __init__(self, input_shape:tuple[int,int,int], output_shape:tuple[int,int,int], *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.device = kwargs.get("device", torch.device("cpu"))
+        self.dtype = kwargs.get("dtype", torch.float32)
+        factory_kwargs = {'device': self.device, 'dtype': self.dtype}
+
+        self.conv_size = (17,13) # time : dividor of mindiv + 1 - pitches : 1 octava
+        self.conv_padding = (self.conv_size[0]//2, self.conv_size[1]//2)
+        self.maxpool_size = (8,1) # Compress time, not pitches
+        self.maxpool_lastsize = (8,4)
+        self.maxpool_dilatation = (1,13) # Dilatation on octava for last pooling
+        self.nbr_channels = 3
+
+        self.conv1 = nn.Conv2d(1, self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.maxpool1 = nn.MaxPool2d(self.maxpool_size)
+        # ReLU
+        self.conv2 = nn.Conv2d(self.nbr_channels, 2*self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.maxpool2 = nn.MaxPool2d(self.maxpool_size)
+        # ReLU
+        self.conv3 = nn.Conv2d(2* self.nbr_channels, 4* self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.maxpool3 = nn.MaxPool2d(self.maxpool_size)
+        # ReLU
+        self.conv4 = nn.Conv2d(4 * self.nbr_channels, 8 * self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.maxpool4 = nn.MaxPool2d(self.maxpool_lastsize, dilation=self.maxpool_dilatation)
+        # ReLU
+        # view
+        self._features_in = self._get_features_size()
+        self._features_in = math.prod(self._features_in[-3:])
+        self.dense5 = nn.Linear(self._features_in, math.prod(output_shape))
+        # view
+        self.boost = nn.Parameter(torch.empty((1,), **factory_kwargs))
+        # Sigmoid
+
+
+    def _get_features_size(self):
+        with torch.no_grad():
+            input = torch.rand(1, *self.input_shape)
+            output = self._forward_conv(input)
+            return output.shape
+        
+
+    def _forward_conv(self, x, debug=False):
+        output = self.conv1(x)
+        output = self.maxpool1(output)
+        output = relu(output)
+        if debug:
+            print(f"Shape after conv 1 : {output.shape}")
+
+        output = self.conv2(output)
+        output = self.maxpool2(output)
+        output = relu(output)
+        if debug:
+            print(f"Shape after conv 2 : {output.shape}")
+
+        output = self.conv3(output)
+        output = self.maxpool3(output)
+        output = relu(output)
+        if debug:
+            print(f"Shape after conv 3 : {output.shape}")
+
+        output = self.conv4(output)
+        output = self.maxpool4(output)
+        output = relu(output)
+        if debug:
+            print(f"Shape after conv 4 : {output.shape}")
+
+        return output
+    
+
+    def forward(self, x, debug=False):
+        output = self._forward_conv(x, debug)
+
+        output = output.view(-1, self._features_in)
+        output = self.dense5(output)
+        output = sigmoid(self.boost * output)
+        if debug:
+            print(f"Shape after dense Layer : {output.shape}")
+        
+        output = output.view(self.output_shape)
+
+        return output
 
 
 
