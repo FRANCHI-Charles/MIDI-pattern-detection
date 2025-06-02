@@ -178,6 +178,9 @@ def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor,
     if convdim == 3:
         torch_array = conv_results / selem.sum((-3,-2,-1))
     else:
+        print(conv_results.shape)
+        print(selem.shape)
+        print(selem.sum((-2,-1)).shape)
         torch_array = conv_results / selem.sum((-2,-1))
 
     if return_numpy_array:

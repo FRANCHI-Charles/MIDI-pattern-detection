@@ -282,7 +282,10 @@ class SimplePatternLearner(nn.Module):
     
 
 class PatternLearner(nn.Module):
-    "DO WE USE RESIDUAL ?"
+    """DO WE USE RESIDUAL ?
+    
+    Dropout if needed."""
+
 
     def __init__(self, input_shape:tuple[int,int,int], output_shape:tuple[int,int,int], *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -302,15 +305,23 @@ class PatternLearner(nn.Module):
         self.conv1 = nn.Conv2d(1, self.nbr_channels, self.conv_size, padding=self.conv_padding)
         self.maxpool1 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
+        self.batchnorm1 = nn.BatchNorm2d(self.nbr_channels)
+
         self.conv2 = nn.Conv2d(self.nbr_channels, 2*self.nbr_channels, self.conv_size, padding=self.conv_padding)
         self.maxpool2 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
+        self.batchnorm2 = nn.BatchNorm2d(2*self.nbr_channels)
+
         self.conv3 = nn.Conv2d(2* self.nbr_channels, 4* self.nbr_channels, self.conv_size, padding=self.conv_padding)
         self.maxpool3 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
+        self.batchnorm3 = nn.BatchNorm2d(4*self.nbr_channels)
+
         self.conv4 = nn.Conv2d(4 * self.nbr_channels, 8 * self.nbr_channels, self.conv_size, padding=self.conv_padding)
         self.maxpool4 = nn.MaxPool2d(self.maxpool_lastsize, dilation=self.maxpool_dilatation)
         # ReLU
+        self.batchnorm4 = nn.BatchNorm2d(8*self.nbr_channels)
+
         # view
         self._features_in = self._get_features_size()
         self._features_in = math.prod(self._features_in[-3:])
@@ -331,24 +342,28 @@ class PatternLearner(nn.Module):
         output = self.conv1(x)
         output = self.maxpool1(output)
         output = relu(output)
+        output = self.batchnorm1(output)
         if debug:
             print(f"Shape after conv 1 : {output.shape}")
 
         output = self.conv2(output)
         output = self.maxpool2(output)
         output = relu(output)
+        output = self.batchnorm2(output)
         if debug:
             print(f"Shape after conv 2 : {output.shape}")
 
         output = self.conv3(output)
         output = self.maxpool3(output)
         output = relu(output)
+        output = self.batchnorm3(output)
         if debug:
             print(f"Shape after conv 3 : {output.shape}")
 
         output = self.conv4(output)
         output = self.maxpool4(output)
         output = relu(output)
+        output = self.batchnorm4(output)
         if debug:
             print(f"Shape after conv 4 : {output.shape}")
 
@@ -364,7 +379,7 @@ class PatternLearner(nn.Module):
         if debug:
             print(f"Shape after dense Layer : {output.shape}")
         
-        output = output.view(self.output_shape)
+        output = output.view(-1, *self.output_shape)
 
         return output
 
