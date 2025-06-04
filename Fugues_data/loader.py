@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import Dataset
 from dataset.utils import load_pickle_data
-from ripdalib.variations.transform import list_to_matrix, _get_mindiv
 
 
 class FuguesDataset(Dataset):

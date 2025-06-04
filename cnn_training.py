@@ -1,15 +1,165 @@
-from collections.abc import Callable
+# All-in-one file to train cnn on cluster.
+# Please be aware Local function may not be up to date.
+
+import os
+from time import time
+import pickle
 
 import torch
+import numpy as np
+from torch.optim import Adam
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, random_split
+import torchvision.transforms.functional as TF
 import torch.nn as nn
-from torch.nn.functional import sigmoid, relu
+from torch.nn.functional import sigmoid, relu, conv2d, conv3d
 import math
-from tqdm import tqdm
-
-from ML.utils import correlation
 
 
-### Loss functions
+################ GLOBAL VARIABLES ####################
+
+DATA_PATH = "data_16_reduced.pkl"
+TEST_SIZE = 0.1
+VALIDATION_SIZE = 0.2
+CNN_MODEL_NAME = 'cnn_patterns_'
+
+MAX_EPOCH = 200
+BATCH_SIZE = 10
+LEARNING_RATE = 0.1
+EPSILON = 0.0000001
+PATTERNS_MAXSIZE = (1, 4*16, 10)
+PATIENCE = 3
+REFINEMENT = 3  # restart training after patience runs out with the best model, decrease lr by...
+LR_FAC = 0.1    # ... the learning rate factor lr_fac: lr_new = lr_old*lr_fac
+LOG_INTERVAL = 60  # seconds
+
+MINDIV = 16 #from Fugues_data.midi_to_pkl import MINDIV
+
+
+torch.manual_seed(689)
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    raise EnvironmentError("cuda is not available.")
+
+
+## Local function from other librairies
+
+# from ML.utils
+def _erodila_conv(ar, selem, device, convdim):
+    if convdim == 2:
+        while ar.ndim < 4:
+            ar = ar.unsqueeze(0)
+        while selem.ndim < 4:
+            selem = selem.unsqueeze(0)
+        ar = ar.float().to(device)
+        selem = selem.float().to(device)
+        out = list()
+        for i in range(ar.shape[0]):
+            out.append(conv2d(ar[i].unsqueeze(0), selem[i].unsqueeze(0), padding=(selem.shape[-2] // 2, selem.shape[-1] // 2)).squeeze(0))
+        return torch.stack(out)
+    else:
+        while ar.ndim < 5:
+            ar = ar.unsqueeze(0)
+        while selem.ndim < 5:
+            selem = selem.unsqueeze(0)
+        ar = ar.float().to(device)
+        selem = selem.float().to(device)
+        out = list()
+        for i in range(ar.shape[0]):
+            out.append(conv3d(ar[i].unsqueeze(0), selem[i].unsqueeze(0), padding=(selem.shape[-3] // 2, selem.shape[-2] // 2, selem.shape[-1] // 2)).squeeze(0))
+        return torch.stack(out)
+    
+
+def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, device: torch.device = "cpu", convdim : int = 2, return_numpy_array: bool = False):
+    """
+    Perform a correlation using torch.conv[2,3]d.
+
+    Parameters
+    ----------
+    ar : np.ndarray | torch.Tensor
+        Image to erode, with shape ((T,) H, W ), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
+    selem : np.ndarray | torch.Tensor
+        Element S to erode `ar` with, with shape ((T,) H,W), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
+    device : torch.device
+        Device to send the `ar` and `selem` tensors.
+    convdim : int = 2, in [2,3]
+        Dimension of the convolution to perform.
+    return_numpy_array : bool = False
+        Convert the output in numpy.ndarray.
+
+    Outputs
+    -------
+    torch.Tensor | np.ndarray
+        Tensor of dimension (MiniBatch=1, Channel=1, (T,) H, W).
+    """
+    # torch_array = (_old_erodila_conv(ar, selem, device) == selem.sum()).squeeze((0,1))
+    if not isinstance(ar, torch.Tensor):
+        ar = torch.tensor(ar)
+    if not isinstance(selem, torch.Tensor):
+        selem = torch.tensor(selem)
+
+    conv_results = _erodila_conv(ar, selem, device, convdim)
+    if selem.shape[-1] %2 == 0:
+        conv_results = conv_results[..., 1:]
+    if selem.shape[-2] %2 == 0:
+        conv_results = conv_results[..., 1:, :]
+    if convdim == 3 and selem.shape[-3] %2 == 0:
+        conv_results = conv_results[..., 1:, :, :]
+
+    if convdim == 3:
+        torch_array = conv_results / selem.sum((-3,-2,-1))[:,:,None,None,None]
+    else:
+        torch_array = conv_results / selem.sum((-2,-1))[:,:,None,None]
+
+    if return_numpy_array:
+        return torch_array.to("cpu").int().numpy()
+    return torch_array
+
+
+#from dataset.utils
+def load_pickle_data(filename:str):
+    with open(filename, "rb") as file :
+        return pickle.load(file)
+
+
+#from Fugues_data.loader
+class FuguesDataset(Dataset): 
+    """
+    Data Augmentation with flip pitches.
+    NOTE : implement pitch transposition and time translation when possible.
+    
+    """
+
+    def __init__(self, data_file:str, maxpitchdif:int=59, maxlength:float=481.0, mindiv:int=16):
+        unprocessed = load_pickle_data(data_file)
+        self.mindiv = mindiv
+        self.names = list()
+        self.data = list()
+
+        for name, value in unprocessed.items():
+            minpitch = min([note[1] for note in value])
+            mintime = min([note[0] for note in value])
+            translated = [(note[0] - mintime, note[1] - minpitch) for note in value]
+            track = [note for note in translated if note[0] <= maxlength and note[1] <= maxpitchdif]
+
+            matrix = torch.zeros((1, int((maxlength+1)*self.mindiv), maxpitchdif+1), dtype=torch.int8)
+            for point in track:
+                matrix[0, round((point[0])*self.mindiv), point[1]] = 1
+            
+            self.names.append(name)
+            self.data.append(matrix)
+
+        self.data = torch.stack(self.data)
+
+    def __getitem__(self, index):
+        return torch.concat((self.data, torch.flip(self.data, (-1,))))[index]
+    
+    def __len__(self):
+        return self.data.shape[0] * 2
+    
+
+# from ML.architecture
 class CorrelationLoss():
     """
     Class of Differents correlation loss, function that tries to maximize the translative correlation between the output (kernel) and the input (image).
@@ -26,7 +176,7 @@ class CorrelationLoss():
         self.mean_size = kwargs.get("mean_size", None)
 
 
-    def minmax_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None):
+    def minmax_regul(self, smooth_function:float=None, beta:float=None, gamma:float=None):
         """
         The loss is `-(1000 * correlation_sum/input.sum() + beta * output.sum()/output_shape + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
 
@@ -69,7 +219,7 @@ class CorrelationLoss():
         return loss
     
 
-    def square_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None, mean_size:float = None):
+    def square_regul(self, smooth_function:float=None, beta:float=None, gamma:float=None, mean_size:float = None):
         """
         The loss is `-(1000 * correlation_sum/input.sum() + size_regulation + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
         Wtih size_regulation is the MSE between the total size and the mean_size if float.
@@ -120,7 +270,7 @@ class CorrelationLoss():
         return loss
     
 
-    def absolute_regul(self, smooth_function:float|Callable=None, beta:float=None, gamma:float=None, mean_size:float = None):
+    def absolute_regul(self, smooth_function:float=None, beta:float=None, gamma:float=None, mean_size:float = None):
         """
         The loss is `-(1000 * correlation_sum/input.sum() + size_regulation + gamma * difference_between_patterns/pattern_size)` and need to be minimize.
         Wtih size_regulation is the absolute difference between the total size and the mean_size if float.
@@ -205,81 +355,6 @@ class CorrelationLoss():
         else:
             self._smooth_function = value
 
-
-### ML Architecture
-class SimplePatternLearner(nn.Module):
-
-    def __init__(self, pattern_maxsize:tuple, strong_negative=False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.device = kwargs.get("device", torch.device("cpu"))
-        self.dtype = kwargs.get("dtype", torch.float32)
-        factory_kwargs = {'device': self.device, 'dtype': self.dtype}
-
-        while len(pattern_maxsize) < 4:
-            pattern_maxsize = (1, *pattern_maxsize)
-
-        self._pattern = nn.Parameter(torch.empty(pattern_maxsize, **factory_kwargs))
-        self._boost = nn.Parameter(torch.empty((1,), **factory_kwargs))
-        self.reset()
-
-        # if strong_negative:
-        #     if isinstance(strong_negative, int):
-        #         value = strong_negative
-        #     else:
-        #         value = 10
-        #     self.activation = lambda x: sigmoid(x[x<0])
-        # else:
-        self.activation = sigmoid
-
-
-    def reset(self):
-        nn.init.kaiming_uniform_(self._pattern, a=math.sqrt(5)) #same init as convolution
-        nn.init.uniform_(self._boost, -1, 1)
-
-
-    def correlation(self, image):
-        with torch.no_grad():
-            return correlation(image, self.pattern, self.device)
-    
-
-    def learn_pattern(self, image, loss:Callable=None, learning_rates:float=0.01, optimization:torch.optim.Optimizer=torch.optim.Adam, maxepoch:int = 10**3, epsilon:float=0.001):
-        self.image = image.to(self.device)
-        
-        self.optimizer = optimization(self.parameters(), lr=learning_rates)
-        if loss is None:
-            self.loss_func = CorrelationLoss().minmax_regul()
-        else:
-            self.loss_func = loss
-
-        self.losses_list = [200,100]
-        
-        for epoch in tqdm(range(1,maxepoch+1), desc=f"Training...", ncols=100):
-
-            if epsilon is not None and abs(self.losses_list[-2] - self.losses_list[-1]) <= epsilon:
-                print(f"Epsilon was reached in {epoch-1} fits.")
-                break
-
-            self.losses_list.append(self.loss_func(self.activation(self._boost * self._pattern), image))
-
-            self.losses_list[-1].backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
-            epoch +=1
-
-            if epoch%10 ==0:
-                print(f"Current_loss = {self.losses_list[-1]}")
-
-        with torch.no_grad():
-            print(f"Last loss : {self.losses_list[-1]:.8f}")
-
-        self.losses_list = self.losses_list[2:]
-
-    @property
-    def pattern(self):
-        with torch.no_grad():
-            return self.activation(self._boost * self._pattern)
-
-    
 
 class PatternLearner(nn.Module):
     """DO WE USE RESIDUAL ?
@@ -382,3 +457,138 @@ class PatternLearner(nn.Module):
         output = output.view(-1, *self.output_shape)
 
         return output
+
+
+####### PATTERN LEARNER DIRECT FUNCTION #######
+
+def train_epoch_cnn(model, optimizer):
+    """
+    Training loop for one epoch of NN training.
+    """
+    model.train()  # set model to training mode (activate dropout layers if any)
+    t = time() # we measure the needed time
+    for batch_idx, input_data in enumerate(train_loader):  # iterate over training input_data
+        input_data = input_data.float().to(device)  # move input_data to device (GPU) if necessary
+        optimizer.zero_grad()  # reset optimizer
+        output = model(input_data)   # forward pass: calculate output of network for input_data
+        loss = LOSS_FUNCTION(output, input_data)
+
+        loss.backward()  # backward pass: calculate gradients using automatic diff. and backprop.
+        optimizer.step()  # udpate parameters of network using our optimizer
+        cur_time = time()
+        # print some outputs if we reached our logging interval
+        if cur_time - t > LOG_INTERVAL or batch_idx == len(train_loader)-1:  
+            print(f"[{batch_idx * BATCH_SIZE}/{len(train_loader.dataset)} ({100. * batch_idx / len(train_loader):.0f}%)]",
+                  f"\tloss: {loss.item():.6f}, took {cur_time - t:.2f}s")
+            t = cur_time
+
+
+def valid_cnn(model):
+    """
+    Test loss evaluation
+    """
+    model.eval()  # set model to inference mode (deactivate dropout layers)
+    with torch.no_grad():  # do not calculate gradients since we do not want to do updates
+        output = model(test_data)
+        loss = LOSS_FUNCTION(output, test_data)
+    print(f'Average eval loss: {loss:.4f}\n')
+    return loss
+
+
+def train_cnn():
+    """
+    Run CNN training using the datasets.
+
+    Return
+    ------
+        nn.Model
+            trained model
+    """
+
+    # create model and optimizer, we use plain SGD with momentum
+    optimizer = OPTIMIZER(model.parameters(), lr=LEARNING_RATE)
+
+    model_cnt = 0
+    new_model_file = os.path.join(CNN_MODEL_NAME + str(model_cnt) + '.model')
+    while os.path.exists(new_model_file):
+        model_cnt += 1
+        new_model_file = os.path.join(CNN_MODEL_NAME + str(model_cnt) + '.model')
+    
+
+    # train model for max_epochs epochs, output loss after log_intervall seconds.
+    # for each epoch run once on validation set, 
+    # write model to disk if validation loss decreased
+    # if validation loss increased, check for early stopping with patience and refinements
+    # after model is trained, perform a run on test set and output loss (don't forget to reload best model!)
+    best_valid_loss = 9999.
+    cur_patience = PATIENCE
+    cur_refin = REFINEMENT
+
+    #model.load_state_dict(torch.load(last_model_file, map_location=device).state_dict())
+    print('Training CNN...')
+    start_t = time()
+
+    for epoch in range(1, MAX_EPOCH+1):
+        train_epoch_cnn(model, optimizer)
+        valid_loss = valid_cnn(model)
+
+        if valid_loss < best_valid_loss:
+            torch.save(model, new_model_file)
+            best_valid_loss = valid_loss
+            cur_patience = PATIENCE
+
+        elif cur_patience <=0:
+            model.load_state_dict(torch.load(new_model_file, map_location=device).state_dict())
+            if cur_refin <= 0:
+                print("Max refinement reached !")
+                break
+            else:
+                print("Max patience reached !")
+                
+                cur_patience = PATIENCE
+                for param_group in optimizer.param_groups:
+                    lr = LR_FAC * param_group['lr']
+                    param_group['lr'] = lr
+                cur_refin -= 1
+            
+        else:
+            print("We still have patience...")
+            cur_patience -= 1
+    
+    print(f'Training took: {time()-start_t:.2f}s for {epoch} epochs')
+    
+    return model
+
+
+
+def load_cnn(load_model:str):
+    "Load the model."
+    if load_model is None or not os.path.exists(load_model):
+        print('Model file not found, unable to load...')
+    else:
+        model.load_state_dict(torch.load(load_model, map_location=device).state_dict())
+        print("Model file loaded: {}".format(load_model))
+    return model
+
+
+##################### CODE ####################
+
+### DATA LOADING
+
+data = FuguesDataset(DATA_PATH)
+
+kwargs = {'num_workers': 2, 'pin_memory': True}
+train, validation, test_data = random_split(data, [(1-TEST_SIZE) * (1-VALIDATION_SIZE), (1-TEST_SIZE) * VALIDATION_SIZE, TEST_SIZE])
+valid_data = next(iter(DataLoader(validation, len(validation), **kwargs))).float().to(device)
+train_loader = DataLoader(train, BATCH_SIZE, shuffle=True, **kwargs)
+test_data = next(iter(DataLoader(test_data, len(test_data), **kwargs))).float().to(device)
+
+### ARCHITECTURE LOADING
+
+model = PatternLearner(data[0].shape, PATTERNS_MAXSIZE)
+
+OPTIMIZER = Adam
+LOSS_FUNCTION = CorrelationLoss().minmax_regul(beta=0.1)
+
+
+train_cnn()
