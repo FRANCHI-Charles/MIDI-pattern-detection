@@ -18,57 +18,66 @@ import math
 
 ################ GLOBAL VARIABLES ####################
 
+SEED = 689
+
 DATA_PATH = "data_16_reduced.pkl"
+MINDIV = 16 #from Fugues_data.midi_to_pkl import MINDIV
+
 TEST_SIZE = 0.1
 VALIDATION_SIZE = 0.2
 CNN_MODEL_NAME = 'cnn_patterns_'
+PATTERNS_MAXSIZE = (1, 4*8, 13)
 
-MAX_EPOCH = 200
-BATCH_SIZE = 10
+MAX_EPOCH = 10000
+BATCH_SIZE = 15
 LEARNING_RATE = 0.1
-EPSILON = 0.0000001
-PATTERNS_MAXSIZE = (1, 4*16, 10)
-PATIENCE = 3
+PATIENCE = 5
 REFINEMENT = 3  # restart training after patience runs out with the best model, decrease lr by...
 LR_FAC = 0.1    # ... the learning rate factor lr_fac: lr_new = lr_old*lr_fac
 LOG_INTERVAL = 60  # seconds
 
-MINDIV = 16 #from Fugues_data.midi_to_pkl import MINDIV
 
 
-torch.manual_seed(689)
+
+torch.manual_seed(SEED)
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    raise EnvironmentError("cuda is not available.")
+    device = torch.device("cpu")
+    #raise EnvironmentError("cuda is not available.")
 
 
 ## Local function from other librairies
 
 # from ML.utils
 def _erodila_conv(ar, selem, device, convdim):
+    while ar.ndim < 2 + convdim:
+        ar = ar.unsqueeze(0)
+    while selem.ndim < 2 + convdim:
+        selem = selem.unsqueeze(0)
+    ar = ar.float().to(device)
+    selem = selem.float().to(device)
+    out = list()
     if convdim == 2:
-        while ar.ndim < 4:
-            ar = ar.unsqueeze(0)
-        while selem.ndim < 4:
-            selem = selem.unsqueeze(0)
-        ar = ar.float().to(device)
-        selem = selem.float().to(device)
-        out = list()
         for i in range(ar.shape[0]):
             out.append(conv2d(ar[i].unsqueeze(0), selem[i].unsqueeze(0), padding=(selem.shape[-2] // 2, selem.shape[-1] // 2)).squeeze(0))
         return torch.stack(out)
     else:
-        while ar.ndim < 5:
-            ar = ar.unsqueeze(0)
-        while selem.ndim < 5:
-            selem = selem.unsqueeze(0)
-        ar = ar.float().to(device)
-        selem = selem.float().to(device)
-        out = list()
         for i in range(ar.shape[0]):
             out.append(conv3d(ar[i].unsqueeze(0), selem[i].unsqueeze(0), padding=(selem.shape[-3] // 2, selem.shape[-2] // 2, selem.shape[-1] // 2)).squeeze(0))
         return torch.stack(out)
+
+
+def _selem_sum(selem, convdim):
+    if convdim == 3:
+        selem_sum = selem.sum((-3,-2,-1))
+        while selem_sum.ndim < 5:
+            selem_sum = selem_sum.unsqueeze(-1)
+    else:
+        selem_sum = selem.sum((-2,-1))
+        while selem_sum.ndim < 4:
+            selem_sum = selem_sum.unsqueeze(-1)
+    return selem_sum
     
 
 def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, device: torch.device = "cpu", convdim : int = 2, return_numpy_array: bool = False):
@@ -107,10 +116,8 @@ def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor,
     if convdim == 3 and selem.shape[-3] %2 == 0:
         conv_results = conv_results[..., 1:, :, :]
 
-    if convdim == 3:
-        torch_array = conv_results / selem.sum((-3,-2,-1))[:,:,None,None,None]
-    else:
-        torch_array = conv_results / selem.sum((-2,-1))[:,:,None,None]
+    selem_sum = _selem_sum(selem, convdim)
+    torch_array = conv_results / selem_sum
 
     if return_numpy_array:
         return torch_array.to("cpu").int().numpy()
@@ -370,10 +377,10 @@ class PatternLearner(nn.Module):
         self.dtype = kwargs.get("dtype", torch.float32)
         factory_kwargs = {'device': self.device, 'dtype': self.dtype}
 
-        self.conv_size = (17,13) # time : dividor of mindiv + 1 - pitches : 1 octava
+        self.conv_size = (9,13) # time : dividor of mindiv + 1 - pitches : 1 octava
         self.conv_padding = (self.conv_size[0]//2, self.conv_size[1]//2)
-        self.maxpool_size = (8,1) # Compress time, not pitches
-        self.maxpool_lastsize = (8,4)
+        self.maxpool_size = (4,1) # Compress time, not pitches
+        self.maxpool_lastsize = (4,4)
         self.maxpool_dilatation = (1,13) # Dilatation on octava for last pooling
         self.nbr_channels = 3
 
@@ -575,9 +582,9 @@ def load_cnn(load_model:str):
 
 ### DATA LOADING
 
-data = FuguesDataset(DATA_PATH)
+data = FuguesDataset(DATA_PATH, mindiv=MINDIV)
 
-kwargs = {'num_workers': 2, 'pin_memory': True}
+kwargs = {'num_workers': 0} #{'num_workers': 4, 'pin_memory': True}
 train, validation, test_data = random_split(data, [(1-TEST_SIZE) * (1-VALIDATION_SIZE), (1-TEST_SIZE) * VALIDATION_SIZE, TEST_SIZE])
 valid_data = next(iter(DataLoader(validation, len(validation), **kwargs))).float().to(device)
 train_loader = DataLoader(train, BATCH_SIZE, shuffle=True, **kwargs)
@@ -588,7 +595,7 @@ test_data = next(iter(DataLoader(test_data, len(test_data), **kwargs))).float().
 model = PatternLearner(data[0].shape, PATTERNS_MAXSIZE)
 
 OPTIMIZER = Adam
-LOSS_FUNCTION = CorrelationLoss().minmax_regul(beta=0.1)
+LOSS_FUNCTION = CorrelationLoss().square_regul(beta=0.8, smooth_function=3, mean_size=8)
 
 
 train_cnn()

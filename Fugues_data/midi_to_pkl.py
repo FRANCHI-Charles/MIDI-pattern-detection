@@ -15,7 +15,7 @@ OPERATION_TO_DO = [0,1,2]
 START = 846
 END = 908
 
-MINDIV = 16
+MINDIV = 8
 
 SORT_FOLDER = "./To sort"
 PROCESSED_FOLDER = "./processed"
@@ -23,7 +23,7 @@ MIDI_FOLDERS = ("Fugues", os.path.join("Fugues", "op87"))
 
 REMOVED_TIMING_PATH = "shorten.txt"
 
-OUTPUT_FILE = "data_16.pkl"
+OUTPUT_FILE = "data_8.pkl"
 
 
 

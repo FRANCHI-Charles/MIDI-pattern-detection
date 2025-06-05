@@ -266,7 +266,7 @@ class SimplePatternLearner(nn.Module):
             self.optimizer.zero_grad()
             epoch +=1
 
-            if epoch%10 ==0:
+            if epoch%(maxepoch//10) ==0:
                 print(f"Current_loss = {self.losses_list[-1]}")
 
         with torch.no_grad():
@@ -295,10 +295,10 @@ class PatternLearner(nn.Module):
         self.dtype = kwargs.get("dtype", torch.float32)
         factory_kwargs = {'device': self.device, 'dtype': self.dtype}
 
-        self.conv_size = (17,13) # time : dividor of mindiv + 1 - pitches : 1 octava
+        self.conv_size = (9,13) # time : dividor of mindiv + 1 - pitches : 1 octava
         self.conv_padding = (self.conv_size[0]//2, self.conv_size[1]//2)
-        self.maxpool_size = (8,1) # Compress time, not pitches
-        self.maxpool_lastsize = (8,4)
+        self.maxpool_size = (4,1) # Compress time, not pitches
+        self.maxpool_lastsize = (4,4)
         self.maxpool_dilatation = (1,13) # Dilatation on octava for last pooling
         self.nbr_channels = 3
 

@@ -61,6 +61,7 @@ def plot_patterns_from_correlation(cor:Tensor, piece:list | Tensor, pattern:list
         piece = matrix_to_list(piece_matrix, quantization)
     else:
         piece_matrix = list_to_matrix(piece, quantization)
+        piece = matrix_to_list(piece_matrix, quantization)
 
     if isinstance(pattern, Tensor):
         pattern = pattern.cpu()
@@ -68,6 +69,7 @@ def plot_patterns_from_correlation(cor:Tensor, piece:list | Tensor, pattern:list
         pattern = matrix_to_list(pattern_matrix, quantization)
     else:
         pattern_matrix = list_to_matrix(pattern, quantization)
+        pattern = matrix_to_list(pattern_matrix, quantization)
 
     
 
@@ -78,14 +80,13 @@ def plot_patterns_from_correlation(cor:Tensor, piece:list | Tensor, pattern:list
         print("No new patterns obtained with this threshold and correlation.")
         return
 
-    translations = piece[np.argmin([piece[i][0] for i in range(len(piece))])]
-    translations = [translations[0] - new_patterns_list[0][0], translations[1] - new_patterns_list[0][1]]
+    # translations = piece[np.argmin([elem[0] for elem in piece])]
+    # translations = [translations[0] - new_patterns_list[0][0], translations[1] - new_patterns_list[0][1]]
+    # print(translations)
 
-    new_patterns_list = [(note[0] +translations[0], note[1] + translations[1]) for note in new_patterns_list]
-
+    # new_patterns_list = [(note[0] + translations[0], note[1] + translations[1]) for note in new_patterns_list]
 
     pattern_all = dilation(erosion(piece, pattern), pattern)
-    
 
     plt.figure(figsize=(20, 10))
     plt.scatter(*zip(*piece))

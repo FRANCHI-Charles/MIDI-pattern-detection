@@ -27,28 +27,33 @@ from deep_morpho.models import BiSE
 #     )
 
 def _erodila_conv(ar, selem, device, convdim):
+    while ar.ndim < 2 + convdim:
+        ar = ar.unsqueeze(0)
+    while selem.ndim < 2 + convdim:
+        selem = selem.unsqueeze(0)
+    ar = ar.float().to(device)
+    selem = selem.float().to(device)
+    out = list()
     if convdim == 2:
-        while ar.ndim < 4:
-            ar = ar.unsqueeze(0)
-        while selem.ndim < 4:
-            selem = selem.unsqueeze(0)
-        ar = ar.float().to(device)
-        selem = selem.float().to(device)
-        out = list()
         for i in range(ar.shape[0]):
             out.append(conv2d(ar[i].unsqueeze(0), selem[i].unsqueeze(0), padding=(selem.shape[-2] // 2, selem.shape[-1] // 2)).squeeze(0))
         return torch.stack(out)
     else:
-        while ar.ndim < 5:
-            ar = ar.unsqueeze(0)
-        while selem.ndim < 5:
-            selem = selem.unsqueeze(0)
-        ar = ar.float().to(device)
-        selem = selem.float().to(device)
-        out = list()
         for i in range(ar.shape[0]):
             out.append(conv3d(ar[i].unsqueeze(0), selem[i].unsqueeze(0), padding=(selem.shape[-3] // 2, selem.shape[-2] // 2, selem.shape[-1] // 2)).squeeze(0))
         return torch.stack(out)
+
+
+def _selem_sum(selem, convdim):
+    if convdim == 3:
+        selem_sum = selem.sum((-3,-2,-1))
+        while selem_sum.ndim < 5:
+            selem_sum = selem_sum.unsqueeze(-1)
+    else:
+        selem_sum = selem.sum((-2,-1))
+        while selem_sum.ndim < 4:
+            selem_sum = selem_sum.unsqueeze(-1)
+    return selem_sum
 
 
 def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, device: torch.device = "cpu", convdim : int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
@@ -89,10 +94,8 @@ def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, 
     if convdim == 3 and selem.shape[-3] %2 == 0:
         conv_results = conv_results[..., 1:, :, :]
 
-    if convdim == 3:
-        torch_array = (conv_results == selem.sum((-3,-2,-1))[:,:,None,None,None])
-    else:
-        torch_array = (conv_results == selem.sum((-2,-1))[:,:,None,None])
+    selem_sum = _selem_sum(selem, convdim)
+    torch_array = (conv_results == selem_sum)
 
     if return_numpy_array:
         return torch_array.to("cpu").int().numpy()
@@ -128,8 +131,11 @@ def my_dilatation(ar: np.ndarray, selem: np.ndarray, device: torch.device = "cpu
     if not isinstance(selem, torch.Tensor):
         selem = torch.tensor(selem)
     
-    flipselem = torch.flip(selem, (0,1))
-    #torch_array = (_old_erodila_conv(ar, flipselem, device) > 0).squeeze((0,1))
+    if convdim ==2:
+        flipselem = torch.flip(selem, (-2,-1))
+    else:
+        flipselem = torch.flip(selem, (-3,-2,-1))
+ 
     conv_results = _erodila_conv(ar, flipselem, device, convdim)
     if selem.shape[-1] %2 == 0:
         conv_results = conv_results[..., :-1]
@@ -183,10 +189,8 @@ def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor,
     if convdim == 3 and selem.shape[-3] %2 == 0:
         conv_results = conv_results[..., 1:, :, :]
 
-    if convdim == 3:
-        torch_array = conv_results / selem.sum((-3,-2,-1))[:,:,None,None,None]
-    else:
-        torch_array = conv_results / selem.sum((-2,-1))[:,:,None,None]
+    selem_sum = _selem_sum(selem, convdim)
+    torch_array = conv_results / selem_sum
 
     if return_numpy_array:
         return torch_array.to("cpu").int().numpy()
