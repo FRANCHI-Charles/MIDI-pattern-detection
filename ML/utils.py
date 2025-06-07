@@ -26,13 +26,13 @@ from deep_morpho.models import BiSE
 #         _format_for_conv(ar, device=device), _format_for_conv(selem, device=device), bias=torch.FloatTensor([0], device=device)
 #     )
 
-def _erodila_conv(ar, selem, device, convdim):
+def _erodila_conv(ar, selem, convdim):
     while ar.ndim < 2 + convdim:
         ar = ar.unsqueeze(0)
     while selem.ndim < 2 + convdim:
         selem = selem.unsqueeze(0)
-    ar = ar.float().to(device)
-    selem = selem.float().to(device)
+    ar = ar.float()
+    selem = selem.float()
     out = list()
     if convdim == 2:
         for i in range(ar.shape[0]):
@@ -56,7 +56,7 @@ def _selem_sum(selem, convdim):
     return selem_sum
 
 
-def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, device: torch.device = "cpu", convdim : int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
+def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, convdim : int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
     """
     Perform an erosion using torch conv2d and conv3d modules.
 
@@ -66,8 +66,6 @@ def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, 
         Image to erode, with shape ((T,) H, W ), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
     selem : np.ndarray | torch.Tensor
         Element S to erode `ar` with, with shape ((T,) H,W), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
-    device : torch.device
-        Device to send the `ar` and `selem` tensors.
     convdim : int = 2, in [2,3]
         Dimension of the convolution to perform.
     return_numpy_array : bool = False
@@ -86,7 +84,7 @@ def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, 
     if not isinstance(selem, torch.Tensor):
         selem = torch.tensor(selem)
 
-    conv_results = _erodila_conv(ar, selem, device, convdim)
+    conv_results = _erodila_conv(ar, selem, convdim)
     if selem.shape[-1] %2 == 0:
         conv_results = conv_results[..., 1:]
     if selem.shape[-2] %2 == 0:
@@ -102,7 +100,7 @@ def my_erosion(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, 
     return torch_array
 
 
-def my_dilatation(ar: np.ndarray, selem: np.ndarray, device: torch.device = "cpu", convdim: int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
+def my_dilatation(ar: np.ndarray, selem: np.ndarray, convdim: int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
     """
     Perform a dilatation using torch conv2d and conv3d modules.
 
@@ -112,8 +110,6 @@ def my_dilatation(ar: np.ndarray, selem: np.ndarray, device: torch.device = "cpu
         Image to dilate, with shape ((T,) H, W ), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
     selem : np.ndarray | torch.Tensor
         Element S to dilate `ar` with, with shape ((T,) H,W), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
-    device : torch.device
-        Device to send the `ar` and `selem` tensors.
     convdim : int = 2, in [2,3]
         Dimension of the convolution to perform.
     return_numpy_array : bool = False
@@ -136,7 +132,7 @@ def my_dilatation(ar: np.ndarray, selem: np.ndarray, device: torch.device = "cpu
     else:
         flipselem = torch.flip(selem, (-3,-2,-1))
  
-    conv_results = _erodila_conv(ar, flipselem, device, convdim)
+    conv_results = _erodila_conv(ar, flipselem, convdim)
     if selem.shape[-1] %2 == 0:
         conv_results = conv_results[..., :-1]
     if selem.shape[-2] %2 == 0:
@@ -153,7 +149,7 @@ def my_dilatation(ar: np.ndarray, selem: np.ndarray, device: torch.device = "cpu
 
 
 
-def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, device: torch.device = "cpu", convdim : int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
+def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor, convdim : int = 2, return_numpy_array: bool = False) -> Union[np.ndarray, torch.Tensor]:
     """
     Perform a correlation using torch.conv[2,3]d.
 
@@ -163,8 +159,6 @@ def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor,
         Image to erode, with shape ((T,) H, W ), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
     selem : np.ndarray | torch.Tensor
         Element S to erode `ar` with, with shape ((T,) H,W), (Channel, (T,) H, W) or (MiniBatch, Channel, (T,) H, W) (T if `convdim = 3`).
-    device : torch.device
-        Device to send the `ar` and `selem` tensors.
     convdim : int = 2, in [2,3]
         Dimension of the convolution to perform.
     return_numpy_array : bool = False
@@ -181,7 +175,7 @@ def correlation(ar: np.ndarray | torch.Tensor, selem: np.ndarray | torch.Tensor,
     if not isinstance(selem, torch.Tensor):
         selem = torch.tensor(selem)
 
-    conv_results = _erodila_conv(ar, selem, device, convdim)
+    conv_results = _erodila_conv(ar, selem, convdim)
     if selem.shape[-1] %2 == 0:
         conv_results = conv_results[..., 1:]
     if selem.shape[-2] %2 == 0:

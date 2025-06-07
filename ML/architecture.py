@@ -111,7 +111,7 @@ class CorrelationLoss():
 
             difference_term, normalisation = self._gamma_regul(output)
 
-            size_loss = torch.tensor(0.)
+            size_loss = 0.
             for i in range(output.shape[0]):
                 size_loss += ((output[i,0][output[i,0] >= 0.5]).sum() - self.mean_size)**2
             size_loss = size_loss/output.shape[0]
@@ -163,7 +163,7 @@ class CorrelationLoss():
 
             difference_term, normalisation = self._gamma_regul(output)
 
-            size_loss = torch.tensor(0.)
+            size_loss = 0.
             for i in range(output.shape[0]):
                 size_loss += torch.abs((output[i,0][output[i,0] >= 0.5]).sum() - self.mean_size)
             size_loss = size_loss/output.shape[0]
@@ -181,8 +181,8 @@ class CorrelationLoss():
     
 
     def _gamma_regul(self, output):
-        difference_term = torch.tensor(0.)
-        normalisation = torch.tensor(1.)
+        difference_term = 0.
+        normalisation = 1.
         if self.gamma != 0:
             normalisation = torch.tensor(math.prod(output[:,0].shape) * len(output.shape[1])*(len(output.shape[1])-1)/2)
             for i in range(output.shape[1]):
@@ -287,20 +287,28 @@ class PatternLearner(nn.Module):
     Dropout if needed."""
 
 
-    def __init__(self, input_shape:tuple[int,int,int], output_shape:tuple[int,int,int], *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, input_shape:tuple[int,int,int],
+                 output_shape:tuple[int,int,int],
+                 conv_size=None,
+                 nbr_channels=None,
+                 maxpool_size=None,
+                 maxpool_lastsize=None,
+                 maxpool_dilatation=None,
+                 *args, **kwargs):
+        
+        super().__init__()
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.device = kwargs.get("device", torch.device("cpu"))
         self.dtype = kwargs.get("dtype", torch.float32)
         factory_kwargs = {'device': self.device, 'dtype': self.dtype}
 
-        self.conv_size = (9,13) # time : dividor of mindiv + 1 - pitches : 1 octava
+        self.conv_size = conv_size if conv_size is not None else (9,13) # time : dividor of mindiv + 1 - pitches : 1 octava
         self.conv_padding = (self.conv_size[0]//2, self.conv_size[1]//2)
-        self.maxpool_size = (4,1) # Compress time, not pitches
-        self.maxpool_lastsize = (4,4)
-        self.maxpool_dilatation = (1,13) # Dilatation on octava for last pooling
-        self.nbr_channels = 3
+        self.maxpool_size = maxpool_size if maxpool_size is not None else (6,1) # Compress time, not pitches
+        self.maxpool_lastsize = maxpool_lastsize if maxpool_lastsize is not None else (6,4)
+        self.maxpool_dilatation = maxpool_dilatation if maxpool_dilatation is not None else (1,13) # Dilatation on octava for last pooling
+        self.nbr_channels = nbr_channels if nbr_channels is not None else 2
 
         self.conv1 = nn.Conv2d(1, self.nbr_channels, self.conv_size, padding=self.conv_padding)
         self.maxpool1 = nn.MaxPool2d(self.maxpool_size)
