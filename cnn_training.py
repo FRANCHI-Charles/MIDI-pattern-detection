@@ -23,13 +23,16 @@ SEED = 689
 DATA_PATH = "data_8_reduced.pkl"
 MINDIV = 8 #from Fugues_data.midi_to_pkl import MINDIV
 
+CONV_BIASES = True
+DENSE_BIAS = False
+
 TEST_SIZE = 0.1
 VALIDATION_SIZE = 0.2
 CNN_MODEL_NAME = 'cnn_patterns_'
 PATTERNS_MAXSIZE = (1, 4*8, 13)
 
 MAX_EPOCH = 10000
-BATCH_SIZE = 15
+BATCH_SIZE = 1
 LEARNING_RATE = 0.01
 PATIENCE = 5
 REFINEMENT = 3  # restart training after patience runs out with the best model, decrease lr by...
@@ -373,6 +376,8 @@ class PatternLearner(nn.Module):
                  maxpool_size=None,
                  maxpool_lastsize=None,
                  maxpool_dilatation=None,
+                 biases_conv = True,
+                 bias_dense = True,
                  *args, **kwargs):
         
         super().__init__()
@@ -389,22 +394,22 @@ class PatternLearner(nn.Module):
         self.maxpool_dilatation = maxpool_dilatation if maxpool_dilatation is not None else (1,13) # Dilatation on octava for last pooling
         self.nbr_channels = nbr_channels if nbr_channels is not None else 2
 
-        self.conv1 = nn.Conv2d(1, self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.conv1 = nn.Conv2d(1, self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool1 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
         self.batchnorm1 = nn.BatchNorm2d(self.nbr_channels)
 
-        self.conv2 = nn.Conv2d(self.nbr_channels, 2*self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.conv2 = nn.Conv2d(self.nbr_channels, 2*self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool2 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
         self.batchnorm2 = nn.BatchNorm2d(2*self.nbr_channels)
 
-        self.conv3 = nn.Conv2d(2* self.nbr_channels, 4* self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.conv3 = nn.Conv2d(2* self.nbr_channels, 4* self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool3 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
         self.batchnorm3 = nn.BatchNorm2d(4*self.nbr_channels)
 
-        self.conv4 = nn.Conv2d(4 * self.nbr_channels, 8 * self.nbr_channels, self.conv_size, padding=self.conv_padding)
+        self.conv4 = nn.Conv2d(4 * self.nbr_channels, 8 * self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool4 = nn.MaxPool2d(self.maxpool_lastsize, dilation=self.maxpool_dilatation)
         # ReLU
         self.batchnorm4 = nn.BatchNorm2d(8*self.nbr_channels)
@@ -412,7 +417,7 @@ class PatternLearner(nn.Module):
         # view
         self._features_in = self._get_features_size()
         self._features_in = math.prod(self._features_in[-3:])
-        self.dense5 = nn.Linear(self._features_in, math.prod(output_shape))
+        self.dense5 = nn.Linear(self._features_in, math.prod(output_shape), bias=bias_dense)
         # view
         self.boost = nn.Parameter(torch.empty((1,), **factory_kwargs))
         # Sigmoid
@@ -601,7 +606,7 @@ test_data = next(iter(DataLoader(test_data, len(test_data), **kwargs))).float().
 
 ### ARCHITECTURE LOADING
 
-model = PatternLearner(data[0].shape, PATTERNS_MAXSIZE).to(device)
+model = PatternLearner(data[0].shape, PATTERNS_MAXSIZE, biases_conv=CONV_BIASES, bias_dense=DENSE_BIAS).to(device)
 
 OPTIMIZER = Adam
 LOSS_FUNCTION = CorrelationLoss().square_regul(beta=0.8, smooth_function=3, mean_size=8)

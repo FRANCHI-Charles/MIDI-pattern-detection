@@ -66,7 +66,7 @@ def midi_to_shorten():
 
     removed_notes = _extract_removed_number(REMOVED_TIMING_PATH)
 
-    for index in tqdm(range(START, END), desc=f"Processing midi files...", ncols=75):
+    for index in tqdm(range(START, END+1), desc=f"Processing midi files...", ncols=75):
 
         midi_file_path = os.path.join(SORT_FOLDER, f"BWV_0{index}.mid")
         if not os.path.exists(midi_file_path):

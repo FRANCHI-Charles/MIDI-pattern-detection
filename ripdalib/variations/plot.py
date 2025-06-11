@@ -15,7 +15,7 @@ def plot_matrix(matrix:Tensor):
     """
     matrix = matrix.cpu()
     plt.figure(figsize=(20, 10))
-    plt.imshow(matrix.T, vmin=0, vmax=1, cmap='gray', origin="lower", interpolation='nearest')
+    plt.imshow(1-matrix.T, vmin=0, vmax=1, cmap='gray', origin="lower", interpolation='nearest')
     plt.show()
 
 

@@ -2,8 +2,10 @@
 deep_morpho/
 deep_morpho_general/
 *.pkl
-!Fugues_data/data_16.pkl
-!Fugues_data/data_48.pkl
+!data_8.pkl
+!data_16.pkl
+!data_48.pkl
+!data_8_reduced.pkl
 !data_16_reduced.pkl
 *.mid
 *.dez
