@@ -23,7 +23,8 @@ SEED = 689
 DATA_PATH = "data_8_reduced.pkl"
 MINDIV = 8 #from Fugues_data.midi_to_pkl import MINDIV
 
-CONV_BIASES = True
+CONV_BIASES = False
+BATCHNORM_AFFINE = False
 DENSE_BIAS = False
 
 TEST_SIZE = 0.1
@@ -606,7 +607,7 @@ test_data = next(iter(DataLoader(test_data, len(test_data), **kwargs))).float().
 
 ### ARCHITECTURE LOADING
 
-model = PatternLearner(data[0].shape, PATTERNS_MAXSIZE, biases_conv=CONV_BIASES, bias_dense=DENSE_BIAS).to(device)
+model = PatternLearner(data[0].shape, PATTERNS_MAXSIZE, biases_conv=CONV_BIASES, bias_dense=DENSE_BIAS, learnable_batch_norm=BATCHNORM_AFFINE).to(device)
 
 OPTIMIZER = Adam
 LOSS_FUNCTION = CorrelationLoss().square_regul(beta=0.8, smooth_function=3, mean_size=8)
