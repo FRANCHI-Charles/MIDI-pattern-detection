@@ -56,7 +56,7 @@ class CorrelationLoss():
 
         def loss(output:torch.Tensor, input:torch.Tensor):
             """
-            output : the output patterns of dimension (OutChannels, Channel//groups, H, W)
+            output : the output patterns of dimension (Batch, OutChannels, H, W)
             
             input : the original image to correlate with.
             """
@@ -103,7 +103,7 @@ class CorrelationLoss():
 
         def loss(output:torch.Tensor, input:torch.Tensor):
             """
-            output : the output patterns of dimension (OutChannels, Channel//groups, H, W).
+            output : the output patterns of dimension (Batch, OutChannels, H, W).
             
             input : the original image to correlate with.
             """
@@ -155,7 +155,7 @@ class CorrelationLoss():
 
         def loss(output:torch.Tensor, input:torch.Tensor):
             """
-            output : the output patterns of dimension (OutChannels, Channel//groups, H, W).
+            output : the output patterns of dimension (Batch, OutChannels, H, W).
             
             input : the original image to correlate with.
             """
@@ -174,7 +174,7 @@ class CorrelationLoss():
 
     def _added_correlation(self, output, input):
         if len(output.shape) !=4:
-            raise ValueError("output must be of dimension (OutChannels, Channel//groups, H, W)")
+            raise ValueError("output must be of dimension (Batch, OutChannels, H, W)")
         cor = correlation(input, output)
         added_cor = self.smooth_function(cor).sum()
         return added_cor

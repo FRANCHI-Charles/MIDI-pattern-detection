@@ -378,6 +378,7 @@ class PatternLearner(nn.Module):
                  maxpool_lastsize=None,
                  maxpool_dilatation=None,
                  biases_conv = True,
+                 learnable_batch_norm = True,
                  bias_dense = True,
                  *args, **kwargs):
         
@@ -398,22 +399,22 @@ class PatternLearner(nn.Module):
         self.conv1 = nn.Conv2d(1, self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool1 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
-        self.batchnorm1 = nn.BatchNorm2d(self.nbr_channels)
+        self.batchnorm1 = nn.BatchNorm2d(self.nbr_channels, affine=learnable_batch_norm)
 
         self.conv2 = nn.Conv2d(self.nbr_channels, 2*self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool2 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
-        self.batchnorm2 = nn.BatchNorm2d(2*self.nbr_channels)
+        self.batchnorm2 = nn.BatchNorm2d(2*self.nbr_channels, affine=learnable_batch_norm)
 
         self.conv3 = nn.Conv2d(2* self.nbr_channels, 4* self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool3 = nn.MaxPool2d(self.maxpool_size)
         # ReLU
-        self.batchnorm3 = nn.BatchNorm2d(4*self.nbr_channels)
+        self.batchnorm3 = nn.BatchNorm2d(4*self.nbr_channels, affine=learnable_batch_norm)
 
         self.conv4 = nn.Conv2d(4 * self.nbr_channels, 8 * self.nbr_channels, self.conv_size, padding=self.conv_padding, bias=biases_conv)
         self.maxpool4 = nn.MaxPool2d(self.maxpool_lastsize, dilation=self.maxpool_dilatation)
         # ReLU
-        self.batchnorm4 = nn.BatchNorm2d(8*self.nbr_channels)
+        self.batchnorm4 = nn.BatchNorm2d(8*self.nbr_channels, affine=learnable_batch_norm)
 
         # view
         self._features_in = self._get_features_size()
