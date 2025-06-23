@@ -529,10 +529,10 @@ def train_cnn():
     optimizer = OPTIMIZER(model.parameters(), lr=LEARNING_RATE)
 
     model_cnt = 0
-    new_model_file = os.path.join(CNN_MODEL_NAME + str(model_cnt) + '.model')
+    new_model_file = os.path.join("CNN_model" , CNN_MODEL_NAME + str(model_cnt) + '.model')
     while os.path.exists(new_model_file):
         model_cnt += 1
-        new_model_file = os.path.join(CNN_MODEL_NAME + str(model_cnt) + '.model')
+        new_model_file = os.path.join("CNN_model" , CNN_MODEL_NAME + str(model_cnt) + '.model')
     
 
     # train model for max_epochs epochs, output loss after log_intervall seconds.
