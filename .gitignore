@@ -2,6 +2,7 @@
 deep_morpho/
 deep_morpho_general/
 pop909/
+ripdalib/
 *.pkl
 !data_8.pkl
 !data_16.pkl
