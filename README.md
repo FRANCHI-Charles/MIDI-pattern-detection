@@ -1,31 +1,42 @@
 # MIDI-pattern-detection
 
-This repository contain the code of the work on
-**Pattern Extraction on Discrete Spaces: Combining Machine Learning and Mathematical Morphology for Computational Music Analysis**.
-You can read the report as `Report.pdf`.
+This repository contains the code supporting the work:  
+**Pattern Extraction on Discrete Spaces: Combining Machine Learning and Mathematical Morphology for Computational Music Analysis**.  
+You can find the accompanying report in `Report.pdf`.
 
-## How to use this repository
+## How to Use This Repository
 
-Install the python library in `requirements.txt` using pip, and run the following files to see the different experiments:
-- `checkfugues.ipynb` is the basic data analysis of the Fugues dataset.
-- `bachtest.ipynb` is the experiment of Section 6 to find pattern variations.
-- `simplepatternlearnertest.ipynb` is the experiment ran to tune the Correlation loss function (see Section 7.2 of the report).
-- `patternlearner.ipynb` is the CNN training and visualisation of the model results (see Section 7.3 of the report).
+Install the Python libraries listed in `requirements.txt` using pip. Then, run the following notebooks to explore the different experiments:
 
-## Organisation of the repository
+- `checkfugues.ipynb` — Basic data analysis of the Fugues dataset.  
+- `bachtest.ipynb` — Experiment from Section 6 for pattern variations.  
+- `simplepatternlearnertest.ipynb` — Tuning the correlation loss function (see Section 7.2 of the report).  
+- `patternlearner.ipynb` — CNN training and model result visualization (see Section 7.3 of the report).
 
-- `CNN_model` cotains the model files of the CNN as Pytorch neural networks. They can be load with `torch.load`.
-  - `which_parameters.md` details the parameters used for each model during traning.
-- `dataset` contains function to process MIDI files.
-- `Fugues_data` contains:
-  - the Fugue dataset as pickle format (`data_{8,16,48}[_reduced].pkl`), with `{8,16,48}` the minimum beat division, "reduced" version contain 10 less files (see the report). When opened, the data object is a dictionary with key the name of the music `BWV_***` or `op87_**b`, and as value a list of (onset, pitch) of notes.
-  - `midi_to_pkl.py` processes the raw data to create other `.pkl` version of the dataset.
-  - Other files are utils library and raw data.
-- `ML` contains the Pattern learner architecture (experiment in Section 7 of the report).
-- `variations` contains functions for the experiment in Section 6 of the report.
-- `bachtest.ipynb` is the experiment of Section 6 to find pattern variations.
-- `checkfugues.ipynb` is the basic data analysis of the Fugues dataset.
-- `cnn_training.py` is the main file to run to train a new CNN. You need to change the path of the dataset so you can use it.
-- `patternlearner.ipynb` is the jupyter notebook version of `cnn_training.py` and contain visualisation of the model results.
-- `simplepatternlearnertest.ipynb` is the experiment ran to tune the Correlation loss function (see Section 7.2 of the report).
-- `requirements.txt` is the library needed to run the code.
+## Repository Structure
+
+- `CNN_model/`  
+  Contains the CNN model files implemented with PyTorch. Models can be loaded with `torch.load`.  
+  - `which_parameters.md` documents the training parameters used for each model.
+
+- `dataset/`  
+  Contains functions for processing MIDI files.
+
+- `Fugues_data/`  
+  - Fugue datasets in pickle format: `data_{8,16,48}[_reduced].pkl`, where `{8,16,48}` refers to the minimum beat division. The "reduced" versions contain 10 fewer files (see the report for details).  
+    Each file is a dictionary where keys are music piece names (e.g., `BWV_***`, `op87_**b`) and values are lists of note (onset, pitch) pairs.  
+  - `midi_to_pkl.py` converts raw data into `.pkl` format.  
+  - Other files include utility functions and raw MIDI data.
+
+- `ML/`  
+  Contains the architecture of the Pattern Learner (related to Section 7 of the report).
+
+- `variations/`  
+  Includes functions for the experiment in Section 6.
+
+- `bachtest.ipynb` — See above.  
+- `checkfugues.ipynb` — See above.  
+- `cnn_training.py` — Main script for training a new CNN. You will need to update the dataset path accordingly.  
+- `patternlearner.ipynb` — Jupyter notebook version of `cnn_training.py` with visualizations.  
+- `simplepatternlearnertest.ipynb` — See above.  
+- `requirements.txt` — List of required Python libraries.
