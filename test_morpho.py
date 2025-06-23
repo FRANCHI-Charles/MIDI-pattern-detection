@@ -52,42 +52,27 @@ def multibatch_morp_op():
     plt.show()
 
 
-def erosion_report():
+def dilatation_erosion_report():
     erodilaobject = image.imread('erodilaobject.png')
     erodilaobject = np.array(np.array(erodilaobject)[:,:,0] < 0.5, dtype=np.int8)
 
     structuring = image.imread('erodilaS.png')
     structuring = np.array(np.array(structuring)[:,:,0] < 0.5, dtype=np.int8)
 
-    _, axes = plt.subplots(1,3)
-    axes[0].imshow(1-erodilaobject, cmap="grey", vmin=0, vmax=1)
-    axes[0].set_title("Object to erode")
-    axes[1].imshow(1-structuring, cmap="grey", vmin=0, vmax=1)
-    axes[1].set_title("Structuring element\n" + r"Zoom $\times$5")
-    axes[2].imshow(~my_erosion(erodilaobject,structuring)[0,0], cmap="grey", vmin=0, vmax=1)
-    axes[2].set_title("Eroded Object")
+    _, axes = plt.subplots(2,2)
+    axes[0,0].imshow(1-erodilaobject, cmap="grey", vmin=0, vmax=1)
+    axes[0,0].set_title("Object to erode")
+    axes[0,1].imshow(1-structuring, cmap="grey", vmin=0, vmax=1)
+    axes[0,1].set_title("Structuring element\n" + r"Zoom $\times$5")
+    axes[1,1].imshow(~my_erosion(erodilaobject,structuring)[0,0], cmap="grey", vmin=0, vmax=1)
+    axes[1,1].set_title("Eroded Object")
+    axes[1,0].imshow(~my_dilatation(erodilaobject,structuring)[0,0], cmap="grey", vmin=0, vmax=1)
+    axes[1,0].set_title("Dilated Object")
 
     plt.show()
 
 
-def dilatation_report():
-    erodilaobject = image.imread('erodilaobject.png')
-    erodilaobject = np.array(np.array(erodilaobject)[:,:,0] < 0.5, dtype=np.int8)
+dilatation_erosion_report()
 
-    structuring = image.imread('erodilaS.png')
-    structuring = np.array(np.array(structuring)[:,:,0] < 0.5, dtype=np.int8)
-
-    _, axes = plt.subplots(1,3)
-    axes[0].imshow(1-erodilaobject, cmap="grey", vmin=0, vmax=1)
-    axes[0].set_title("Object to dilate")
-    axes[1].imshow(1-structuring, cmap="grey", vmin=0, vmax=1)
-    axes[1].set_title("Structuring element\n" + r"Zoom $\times$5")
-    axes[2].imshow(~my_dilatation(erodilaobject,structuring)[0,0], cmap="grey", vmin=0, vmax=1)
-    axes[2].set_title("Dilated Object")
-
-    plt.show()
-
-dilatation_report()
-#erosion_report()
 #show_morp_op()
 #multibatch_morp_op()
